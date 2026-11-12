@@ -1,0 +1,40 @@
+{
+  "date": "2026-11-12",
+  "checks": [
+    {
+      "name": "video processed by real MediaPipe model",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "video-driven cursor moves",
+      "pass": true,
+      "details": "{\"first\":[50.8562,32.6651],\"second\":[35.291,31.2183]}"
+    },
+    {
+      "name": "video source is honestly labeled",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "video input released on stop",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "MediaRecorder started",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "MediaRecorder produced a downloadable video",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "inference works with external network blocked",
+      "pass": true,
+      "details": "320 ms"
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "date": "2026-11-12",
+  "checks": [
+    {
+      "name": "pointer stroke",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "second color",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "keyboard undo",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "keyboard redo",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "cancel clear preserves artwork",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "confirm clear",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "undo clear",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "local persistence",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "eraser keyboard shortcut",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "PNG export",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "real MediaPipe inference on official image",
+      "pass": true,
+      "details": "314 ms"
+    },
+    {
+      "name": "sample clearly labeled",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "stop source resets UI",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "emulated camera permission denial recovery",
+      "pass": true,
+      "details": ""
+    },
+    {
+      "name": "mobile has no horizontal overflow",
+      "pass": true,
+      "details": "{\"body\":390,\"viewport\":390}"
+    }
+  ]
+}

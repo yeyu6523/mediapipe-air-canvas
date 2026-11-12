@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef2f8">
+  <meta name="description" content="空中画室：用 MediaPipe 在浏览器本地识别手势，捏合绘画、悬停换色，把灵感画在空气里。">
+  <title>空中画室 · Air Canvas</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="13" rx="3"/><path d="m16 10 5-3v11l-5-3M7 3h5"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="m14 4 6 6M4 20l5-1L21 7a2.1 2.1 0 0 0-4-4L5 15l-1 5Z"/></symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24"><path d="m14 3 7 7-10 11H7l-5-5L14 3ZM7 10l7 7M11 21h10"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="m8 4-5 5 5 5M3 9h11a6 6 0 0 1 0 12h-3"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="m16 4 5 5-5 5M21 9H10a6 6 0 0 0 0 12h3"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 15v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7V5Z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 13V5a1.5 1.5 0 0 1 3 0v6-8a1.5 1.5 0 0 1 3 0v8-6a1.5 1.5 0 0 1 3 0v7-4a1.5 1.5 0 0 1 3 0v7a7 7 0 0 1-13 4l-4-6a1.5 1.5 0 0 1 2-2l3 3"/></symbol>
+    <symbol id="i-mouse" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 6v4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3m-5 5 5-5 5 5M4 14v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.1"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 8h16M4 16h16M8 4v16M16 4v16"/></symbol>
+  </defs></svg>
+
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="空中画室首页"><img src="./favicon.svg" width="38" height="38" alt=""><span>空中画室<small>AIR CANVAS</small></span></a>
+    <nav aria-label="主导航"><a href="#guide" class="quiet-link">使用指南</a><span class="privacy-note"><span class="status-dot"></span>浏览器本地处理</span></nav>
+  </header>
+
+  <main>
+    <div class="page-heading"><div><h1>让灵感，随手而来<span>。</span></h1><p>捏合落笔，张开抬笔。给你的双手，一张自由的画布。</p></div><button id="export" class="button primary"><svg class="icon"><use href="#i-save"/></svg>保存作品<span class="button-hint">PNG</span></button></div>
+
+    <section class="studio" aria-label="交互绘画工作台">
+      <div class="workspace">
+        <div class="canvas-toolbar">
+          <div class="work-title"><span id="work-state" class="work-dot"></span><span>我的空中习作</span><span id="stroke-count" class="secondary">0 笔</span></div>
+          <div class="history-tools"><button id="undo" class="icon-button" aria-label="撤销（Ctrl+Z）" title="撤销 · Ctrl+Z" disabled><svg class="icon"><use href="#i-undo"/></svg></button><button id="redo" class="icon-button" aria-label="重做（Ctrl+Shift+Z）" title="重做 · Ctrl+Shift+Z" disabled><svg class="icon"><use href="#i-redo"/></svg></button><span class="tool-divider"></span><button id="clear" class="icon-button danger-hover" aria-label="清空画布" title="清空画布" disabled><svg class="icon"><use href="#i-trash"/></svg></button></div>
+        </div>
+
+        <div class="paper-stage" id="paper-stage">
+          <canvas id="drawing" width="1600" height="1000" aria-label="绘画画布，支持鼠标拖动、触控或摄像头手势"></canvas>
+          <div class="air-palette" id="air-palette" aria-label="悬停 0.7 秒切换画笔颜色"><span>悬停换色</span><button class="air-swatch" data-color="#e56b49" style="--swatch:#e56b49" aria-label="手势换色：日落橙" aria-pressed="true"></button><button class="air-swatch" data-color="#3158d5" style="--swatch:#3158d5" aria-label="手势换色：群青蓝" aria-pressed="false"></button><button class="air-swatch" data-color="#258474" style="--swatch:#258474" aria-label="手势换色：松石绿" aria-pressed="false"></button><button class="air-swatch" data-color="#26334d" style="--swatch:#26334d" aria-label="手势换色：午夜黑" aria-pressed="false"></button><span class="dwell-line" id="dwell-line"></span></div>
+          <div class="empty-canvas" id="empty-canvas">
+            <div class="empty-mark"><svg class="icon"><use href="#i-pen"/></svg><span class="orbit-dot"></span></div>
+            <h2>下一笔，画在空气里。</h2><p>让手进入镜头，拇指与食指轻轻捏合，<br>移动指尖，就能留下线条。</p>
+            <div class="empty-actions"><button class="button primary camera-trigger"><svg class="icon"><use href="#i-camera"/></svg>开启摄像头</button><button id="try-mouse" class="button soft"><svg class="icon"><use href="#i-mouse"/></svg>鼠标试画</button></div>
+            <span class="permission-note">只在本地识别，不上传摄像头画面</span>
+          </div>
+          <div class="hand-cursor" id="hand-cursor" hidden><span></span></div>
+          <div class="paper-caption"><span id="canvas-mode">1600 × 1000</span><span id="input-hint">准备好，画下第一笔</span></div>
+        </div>
+
+        <div class="canvas-status"><div><span id="interaction-dot" class="status-dot neutral"></span><span id="interaction-status">等待你的第一笔</span></div><div class="paper-options"><button id="grid-toggle" class="text-button" aria-pressed="false"><svg class="icon small"><use href="#i-grid"/></svg>辅助网格</button><span class="small-separator"></span><span id="autosave-status">自动保存至本机</span></div></div>
+        <div class="source-message" id="source-message" role="status" hidden></div>
+        <div class="clear-confirm" id="clear-confirm" hidden><span>清空这张画布？你可以用「撤销」找回来。</span><div><button id="cancel-clear" class="button soft compact">继续画</button><button id="confirm-clear" class="button danger compact">确认清空</button></div></div>
+
+        <div class="studio-note"><svg class="icon"><use href="#i-info"/></svg><p>小提示：保持手掌完整入镜，在光线充足、背景简洁的地方，识别会更稳定。</p><button id="sample-shortcut" class="text-button">没有摄像头？体验识别示例<svg class="icon small"><use href="#i-arrow"/></svg></button></div>
+      </div>
+
+      <aside class="control-rail" aria-label="摄像头与画笔设置">
+        <section class="tracking-panel">
+          <div class="panel-heading"><h2>手势视窗</h2><span id="source-badge" class="tag">未开启</span></div>
+          <div class="camera-preview" id="camera-preview"><video id="source-video" playsinline muted hidden></video><canvas id="preview" width="640" height="480" hidden></canvas><div id="camera-placeholder"><svg class="icon"><use href="#i-hand"/></svg><span>把手放进画面</span><small>你的指尖，就是画笔</small></div><span class="preview-label" id="preview-label" hidden></span></div>
+          <div class="tracking-readout"><span><span id="model-dot" class="status-dot neutral"></span><span id="model-status">模型待加载</span></span><span id="inference-ms">— ms</span></div>
+          <button id="camera-toggle" class="button primary full camera-trigger"><svg class="icon"><use href="#i-camera"/></svg><span id="camera-button-text">开启摄像头</span></button>
+          <div class="source-alternatives"><button id="sample" class="text-button"><svg class="icon small"><use href="#i-play"/></svg>识别示例</button><button id="import-button" class="text-button"><svg class="icon small"><use href="#i-upload"/></svg>导入素材</button><input id="import-file" type="file" accept="image/*,video/*" hidden></div>
+          <div class="gesture-readout" id="gesture-readout"><span>手势状态</span><strong id="gesture-name">等待手部出现</strong></div>
+        </section>
+
+        <section class="brush-panel"><div class="panel-heading"><h2>画笔</h2><span id="width-label" class="secondary">8 px</span></div>
+          <div class="tool-switch" role="group" aria-label="绘画工具"><button id="pen-tool" class="tool-option active" aria-pressed="true"><svg class="icon"><use href="#i-pen"/></svg>画笔<span>B</span></button><button id="eraser-tool" class="tool-option" aria-pressed="false"><svg class="icon"><use href="#i-eraser"/></svg>橡皮<span>E</span></button></div>
+          <div class="color-heading"><label>墨水颜色</label><span id="color-name">日落橙</span></div>
+          <div id="colors" class="color-palette" role="group" aria-label="墨水颜色"></div>
+          <label class="range-label" for="brush-width">笔触粗细</label><div class="range-row"><span class="size-dot tiny"></span><input id="brush-width" type="range" min="2" max="40" step="1" value="8" aria-label="笔触粗细"><span class="size-dot"></span></div>
+          <div class="stroke-preview"><svg viewBox="0 0 230 32" aria-hidden="true"><path id="brush-preview" d="M9 21C42 21 41 6 72 9S98 27 131 19 174 8 220 14" fill="none" stroke="#e56b49" stroke-width="8" stroke-linecap="round"/></svg></div>
+        </section>
+
+        <section class="tuning-panel"><details id="advanced"><summary>识别设置<span>调到顺手</span></summary><label class="range-label" for="sensitivity">捏合灵敏度 <output id="sensitivity-label">标准</output></label><input id="sensitivity" type="range" min="0.2" max="0.65" step="0.05" value="0.4"><p>向右调更容易落笔；如果误触较多，请向左调。</p><label class="check-label"><input id="mirror" type="checkbox" checked>镜像画面与指尖位置</label><label class="check-label"><input id="skeleton" type="checkbox" checked>显示手部关键点</label></details></section>
+      </aside>
+    </section>
+
+    <section class="guide" id="guide"><div class="guide-title"><h2>三步，找到手感。</h2><p>第一次玩？跟着做就好。</p></div><div class="guide-step"><span class="step-number">1</span><div><h3>让手进入镜头</h3><p>开启摄像头，手掌完整入镜。视窗中出现关键点，表示识别成功。</p></div></div><div class="guide-step"><span class="step-number">2</span><div><h3>捏合，开始画</h3><p>拇指与食指捏合落笔，分开抬笔。指尖移到画布上方色块，悬停 0.7 秒换色。</p></div></div><div class="guide-step"><span class="step-number">3</span><div><h3>留住你的灵感</h3><p>保存为 PNG，或录一段创作过程。鼠标拖动和触屏也可以直接绘画。</p></div></div></section>
+    <footer><span>Air Canvas <span class="footer-divider">/</span> 基于 MediaPipe Hand Landmarker</span><div><span class="shortcut-help"><kbd>B</kbd>画笔 <kbd>E</kbd>橡皮 <kbd>Ctrl Z</kbd>撤销</span><button id="record" class="text-button"><svg class="icon small"><use href="#i-film"/></svg><span id="record-label">录制创作过程</span></button></div></footer>
+  </main>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>

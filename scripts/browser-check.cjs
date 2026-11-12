@@ -1,0 +1,58 @@
+async (page) => {
+  const output = 'output/playwright';
+  const checks = [];
+  const check = (name, pass, details = '') => { checks.push({ name, pass: Boolean(pass), details }); if (!pass) throw new Error(name + ': ' + details); };
+  const read = id => page.locator('#' + id).textContent();
+  // Leave the app first: its pagehide handler intentionally saves pending artwork.
+  await page.goto('about:blank');
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Storage.clearDataForOrigin', { origin: 'http://localhost:4173', storageTypes: 'local_storage' });
+  await page.goto('http://localhost:4173');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({ path: output + '/desktop-empty.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: output + '/mobile-empty.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole('button', { name: '鼠标试画', exact: true }).click();
+  const rect = await page.locator('#drawing').boundingBox();
+  const draw = async (x, y, dx, dy) => {
+    await page.mouse.move(rect.x + rect.width * x, rect.y + rect.height * y); await page.mouse.down();
+    await page.mouse.move(rect.x + rect.width * (x + dx), rect.y + rect.height * (y + dy), { steps: 20 }); await page.mouse.up();
+  };
+  await draw(0.25, 0.3, 0.3, 0.2); check('pointer stroke', (await read('stroke-count')) === '1 笔');
+  await page.getByRole('button', { name: '群青蓝', exact: true }).click();
+  await draw(0.3, 0.6, 0.3, -0.2); check('second color', (await read('stroke-count')) === '2 笔');
+  await page.keyboard.press('Control+z'); check('keyboard undo', (await read('stroke-count')) === '1 笔');
+  await page.keyboard.press('Control+Shift+z'); check('keyboard redo', (await read('stroke-count')) === '2 笔');
+  await page.getByRole('button', { name: '清空画布', exact: true }).click();
+  await page.getByRole('button', { name: '继续画', exact: true }).click(); check('cancel clear preserves artwork', (await read('stroke-count')) === '2 笔');
+  await page.getByRole('button', { name: '清空画布', exact: true }).click();
+  await page.getByRole('button', { name: '确认清空', exact: true }).click(); check('confirm clear', (await read('stroke-count')) === '0 笔');
+  await page.keyboard.press('Control+z'); check('undo clear', (await read('stroke-count')) === '2 笔');
+  await page.waitForTimeout(500); await page.reload(); check('local persistence', (await read('stroke-count')) === '2 笔');
+  await page.keyboard.press('e'); check('eraser keyboard shortcut', (await page.locator('#eraser-tool').getAttribute('aria-pressed')) === 'true');
+  await page.keyboard.press('b');
+  const downloadPromise = page.waitForEvent('download'); await page.locator('#export').click();
+  const download = await downloadPromise; await download.saveAs(output + '/export-test.png');
+  check('PNG export', (await download.failure()) === null);
+  await page.locator('#sample').click();
+  await page.waitForFunction(() => document.getElementById('model-status').textContent.includes('21 关键点'), null, { timeout: 45000 });
+  check('real MediaPipe inference on official image', (await read('model-status')).includes('21 关键点'), await read('inference-ms'));
+  check('sample clearly labeled', (await read('preview-label')).includes('非摄像头'));
+  await page.locator('#toast').waitFor({ state: 'hidden' });
+  await page.screenshot({ path: output + '/desktop-active.png', fullPage: true });
+  await page.locator('#camera-toggle').click(); check('stop source resets UI', (await read('source-badge')) === '未开启');
+  await cdp.send('Browser.setPermission', { permission: { name: 'camera' }, setting: 'denied', origin: 'http://localhost:4173' });
+  await page.locator('#camera-toggle').click();
+  await page.waitForFunction(() => !document.getElementById('source-message').hidden, null, { timeout: 45000 });
+  check('emulated camera permission denial recovery', (await read('source-message')).includes('摄像头'));
+  await cdp.send('Browser.resetPermissions'); await cdp.detach();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('#advanced').evaluate(element => element.open = true);
+  await page.screenshot({ path: output + '/mobile.png', fullPage: true });
+  const dimensions = await page.evaluate(() => ({ body: document.documentElement.scrollWidth, viewport: innerWidth }));
+  check('mobile has no horizontal overflow', dimensions.body <= dimensions.viewport, JSON.stringify(dimensions));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  console.log(JSON.stringify(checks, null, 2));
+  return checks;
+}
