@@ -245,4 +245,3 @@ The studio's signature hand-selection instrument.
 - **Don't** turn the mobile brand strapline or isolated 11px exceptions into a functional-label token.
 - **Don't** rely on color alone to communicate input source or tracking state.
 - **Don't** replace the existing outline SVG icon language with typographic glyph icons.
-
